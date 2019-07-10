@@ -34,6 +34,7 @@ add_library (zerberus STATIC
       ${PCH}
       ${INCS}
       )
+target_link_libraries(zerberus PUBLIC synthesizer)
 
 if (NOT MSVC)
    set_target_properties (

@@ -304,7 +304,7 @@ else (NOT MSVC)
    set(_all_h_file "${PROJECT_SOURCE_DIR}/all.h")
 endif (NOT MSVC)
 
-add_executable ( ${ExecutableName}
+set (all_files
       ${qrc_files}
       ${ui_headers}
       ${_all_h_file}
@@ -486,22 +486,29 @@ add_executable ( ${ExecutableName}
       sparkle/autoUpdater.h sparkle/sparkleAutoUpdater.h sparkle/winSparkleAutoUpdater.h
       )
 
+add_executable(${ExecutableName} ${all_files})
+list(APPEND mscore_targets ${ExecutableName})
+if (BUILD_MSCORE_LIBRARY)
+    add_library(mscore_lib STATIC ${all_files})
+    target_compile_definitions(mscore_lib PRIVATE BUILD_MSCORE_LIBRARY)
+    list(APPEND mscore_targets mscore_lib)
+endif ()
 
-
+foreach (mscore_target ${mscore_targets})
 if (MSVC OR MINGW)
-	target_link_libraries(mscore vorbisfiledll)
+        target_link_libraries(${mscore_target} vorbisfiledll)
 else (MSVC OR MINGW)
-	target_link_libraries(mscore vorbisfile)
+        target_link_libraries(${mscore_target} vorbisfile)
 endif (MSVC OR MINGW)
 
-target_link_libraries(mscore
+target_link_libraries(${mscore_target}
       awl
       bww
       rtf2html
       ${QTSINGLEAPPLICATION_LIBRARIES}
-      synthesizer
       midi
       fluid
+      synthesizer
       effects
       libmscore
       qzip
@@ -510,14 +517,15 @@ target_link_libraries(mscore
       )
 
 if (BUILD_CRASH_REPORTER)
-      target_link_libraries(mscore crashreporter-handler)
+      target_link_libraries(${mscore_target} crashreporter-handler)
 endif (BUILD_CRASH_REPORTER)
 
-add_dependencies(mscore workspaces)
+add_dependencies(${mscore_target} workspaces)
 
 if (USE_SYSTEM_FREETYPE)
-      target_link_libraries(mscore ${FREETYPE_LIBRARIES})
+      target_link_libraries(${mscore_target} ${FREETYPE_LIBRARIES})
 endif (USE_SYSTEM_FREETYPE)
+endforeach ()
 
 if (MINGW OR MSVC)
       set(MSCORE_OUTPUT_NAME ${MUSESCORE_NAME}${MUSESCORE_VERSION_MAJOR})
@@ -536,41 +544,43 @@ if (MSCORE_OUTPUT_NAME)
       )
 endif (MSCORE_OUTPUT_NAME)
 
+foreach (mscore_target ${mscore_targets})
 if (ZERBERUS)
-      target_link_libraries(mscore zerberus synthesizer)
+      target_link_libraries(${mscore_target} zerberus synthesizer)
 endif (ZERBERUS)
 if (AEOLUS)
-      target_link_libraries(mscore aeolus)
+      target_link_libraries(${mscore_target} aeolus)
 endif (AEOLUS)
 if (SOUNDFONT3)
       if (MSVC OR MINGW)
-          target_link_libraries(mscore vorbisdll oggdll)
+          target_link_libraries(${mscore_target} vorbisdll oggdll)
       else (MSVC OR MINGW)
-          target_link_libraries(mscore ${VORBIS_LIB} ${OGG_LIB})
+          target_link_libraries(${mscore_target} ${VORBIS_LIB} ${OGG_LIB})
       endif (MSVC OR MINGW)
 endif (SOUNDFONT3)
 
 if (HAS_AUDIOFILE)
       if (MSVC OR MINGW)
-         target_link_libraries(mscore audiofile sndfiledll)
+         target_link_libraries(${mscore_target} audiofile sndfiledll)
       else (MSVC OR MINGW)
-         target_link_libraries(mscore audiofile ${SNDFILE_LIB})
+         target_link_libraries(${mscore_target} audiofile ${SNDFILE_LIB})
       endif (MSVC OR MINGW)
 endif (HAS_AUDIOFILE)
 
 if (APPLE)
-      set_target_properties (mscore
+      set_target_properties (${mscore_target}
           PROPERTIES
           MACOSX_BUNDLE_INFO_PLIST ${PROJECT_SOURCE_DIR}/build/MacOSXBundleInfo.plist.in)
       # Enable dSym generation
-      #set_target_properties (mscore
+      #set_target_properties (${mscore_target}
       #    PROPERTIES
       #       XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
 endif (APPLE)
 
 if (OSC)
-      target_link_libraries(mscore ofqf)
+      target_link_libraries(${mscore_target} ofqf)
 endif (OSC)
+endforeach ()
 
 if (MINGW)
    set (QT_WRC_EXECUTABLE        ${PROJECT_SOURCE_DIR}/build/wrc.bat)
@@ -588,21 +598,22 @@ if (MINGW)
       )
    string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
    # Windows: Add -mconsole to LINK_FLAGS to get a console window for debug output
+   foreach (mscore_target ${mscore_targets})
    if(CMAKE_BUILD_TYPE MATCHES "DEBUG")
-     set_target_properties( mscore
+     set_target_properties( ${mscore_target}
         PROPERTIES
            COMPILE_FLAGS "${PCH_INCLUDE} -g -Wall -Wextra -Winvalid-pch ${QT_DEFINITIONS} -DQT_SVG_LIB -DQT_GUI_LIB -DQT_XML_LIB -DQT_CORE_LIB"
            LINK_FLAGS "-mwindows -mconsole -L ${QT_INSTALL_LIBS}"
         )
    else(CMAKE_BUILD_TYPE MATCHES "DEBUG")
-     set_target_properties( mscore
+     set_target_properties( ${mscore_target}
           PROPERTIES
              COMPILE_FLAGS "${PCH_INCLUDE} -Wall -Wextra -Winvalid-pch ${QT_DEFINITIONS} -DQT_SVG_LIB -DQT_GUI_LIB -DQT_XML_LIB -DQT_CORE_LIB"
              LINK_FLAGS "-Wl,-S -mwindows -L ${QT_INSTALL_LIBS}"
           )
    endif(CMAKE_BUILD_TYPE MATCHES "DEBUG")
 
-   target_link_libraries(mscore
+   target_link_libraries(${mscore_target}
       portaudiodll
       portmidi
       winmm
@@ -611,11 +622,12 @@ if (MINGW)
       )
 
    if (OMR)
-      target_link_libraries(mscore omr poppler-qt5)
+      target_link_libraries(${mscore_target} omr poppler-qt5)
       if (OCR)
-            target_link_libraries(mscore tesseract_api)
+            target_link_libraries(${mscore_target} tesseract_api)
       endif (OCR)
    endif (OMR)
+   endforeach ()
 
    # Keep dependencies in alphabetical order. Changes made to this list
    # might need to be made in "build/Linux+BSD/portable/copy-libs" too.
@@ -632,7 +644,9 @@ if (MINGW)
    endforeach (QtLibrary ${QT_LIBRARIES})
    list(REMOVE_DUPLICATES QtInstallLibraries)
 
-   target_link_libraries(mscore ${QT_LIBRARIES})
+   foreach (mscore_target ${mscore_targets})
+   target_link_libraries(${mscore_target} ${QT_LIBRARIES})
+   endforeach ()
 
    install( TARGETS mscore RUNTIME DESTINATION bin )
 
@@ -722,7 +736,8 @@ else (MINGW)
             )
       endif(NOT APPLE AND USE_WEBENGINE)
 
-      target_link_libraries(mscore
+      foreach (mscore_target ${mscore_targets})
+      target_link_libraries(${mscore_target}
          ${ALSA_LIB}
          ${QT_LIBRARIES}
          z
@@ -731,13 +746,13 @@ else (MINGW)
          )
 
        if (USE_SYSTEM_FREETYPE)
-            target_link_libraries(mscore freetype)
+            target_link_libraries(${mscore_target} freetype)
        else (USE_SYSTEM_FREETYPE)
-            target_link_libraries(mscore mscore_freetype)
+            target_link_libraries(${mscore_target} mscore_freetype)
        endif (USE_SYSTEM_FREETYPE)
 
        if (USE_PORTAUDIO)
-         target_link_libraries(mscore ${PORTAUDIO_LIB})
+         target_link_libraries(${mscore_target} ${PORTAUDIO_LIB})
        endif (USE_PORTAUDIO)
 
        if (USE_PORTMIDI)
@@ -746,39 +761,40 @@ else (MINGW)
            else (APPLE)
                set(PORTMIDI_LIB -lportmidi -lporttime) # Remove -lporttime on RPM-based systems where PortTime is part of PortMidi.
            endif (APPLE)
-           target_link_libraries(mscore ${PORTMIDI_LIB})
+           target_link_libraries(${mscore_target} ${PORTMIDI_LIB})
        endif (USE_PORTMIDI)
 
        if (USE_PULSEAUDIO)
-         target_link_libraries(mscore ${PULSEAUDIO_LIBRARY})
+         target_link_libraries(${mscore_target} ${PULSEAUDIO_LIBRARY})
        endif (USE_PULSEAUDIO)
 
       set_target_properties (
-         mscore
+         ${mscore_target}
          PROPERTIES
             COMPILE_FLAGS "${PCH_INCLUDE} -g -Wall -Wno-overloaded-virtual -Winvalid-pch"
          )
 
       if (OMR)
-         target_link_libraries(mscore omr poppler-qt5)
+         target_link_libraries(${mscore_target} omr poppler-qt5)
          if (OCR)
-               target_link_libraries(mscore tesseract_api)
+               target_link_libraries(${mscore_target} tesseract_api)
          endif (OCR)
       endif (OMR)
 
       if (APPLE)
-        target_link_libraries(mscore ${OsxFrameworks})
+        target_link_libraries(${mscore_target} ${OsxFrameworks})
       else (APPLE)
-          target_link_libraries(mscore rt)
+          target_link_libraries(${mscore_target} rt)
       endif (APPLE)
 
       # 'gold' does not use indirect shared libraries for symbol resolution, Linux only
       if (NOT APPLE)
          if(USE_JACK)
-            target_link_libraries(mscore ${CMAKE_DL_LIBS})
+            target_link_libraries(${mscore_target} ${CMAKE_DL_LIBS})
          endif(USE_JACK)
-         target_link_libraries(mscore rt)
+         target_link_libraries(${mscore_target} rt)
       endif (NOT APPLE)
+      endforeach ()
 
       if (APPLE)
          set_target_properties(mscore
@@ -1044,8 +1060,10 @@ endif (APPLE)
 
 # MSVC does not depend on mops1 & mops2 for PCH
 if (NOT MSVC)
-   ADD_DEPENDENCIES(${ExecutableName} mops1)
-   ADD_DEPENDENCIES(${ExecutableName} mops2)
+   foreach (mscore_target ${mscore_targets})
+   ADD_DEPENDENCIES(${mscore_target} mops1)
+   ADD_DEPENDENCIES(${mscore_target} mops2)
+    endforeach ()
 endif (NOT MSVC)
 
 add_library(

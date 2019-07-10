@@ -48,6 +48,7 @@ add_library (fluid STATIC
       ${SF3_SRC}
       ${INCS}
       )
+target_link_libraries(fluid PUBLIC synthesizer)
 if (NOT MSVC)
    set_target_properties (
       fluid

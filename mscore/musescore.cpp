@@ -7157,7 +7157,7 @@ using namespace Ms;
 //---------------------------------------------------------
 //   main
 //---------------------------------------------------------
-
+#ifndef BUILD_MSCORE_LIBRARY
 int main(int argc, char* av[])
       {
 #ifndef NDEBUG
@@ -7784,6 +7784,7 @@ int main(int argc, char* av[])
 
       return qApp->exec();
       }
+#endif // BUILD_MSCORE_LIBRARY
 
 //---------------------------------------------------------
 //   exportPartsPdfsToJSON
